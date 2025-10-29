@@ -6,6 +6,14 @@ import type { UserProfile } from '@/types/global';
 import { findUserByEmail, safeUser } from '@/lib/mockData'; // Import mock data functions
 import { login as authLogin, getProfile, testSupabaseConnection } from '@/services/authService';
 
+// Utility function to add timeout to promises
+const withTimeout = function<T>(p: Promise<T>, ms = 4000): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error('profiles fetch timeout')), ms);
+    p.then((v) => { clearTimeout(t); resolve(v); }).catch((e) => { clearTimeout(t); reject(e); });
+  });
+};
+
 interface AuthContextType {
   user: UserProfile | null;
   session: Session | null;
@@ -83,13 +91,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (newSession?.user) {
           console.log('Fetching user profile for:', newSession.user.id);
           try {
-            // Add a safety timeout so the UI never hangs
-            const withTimeout = <T>(p: Promise<T>, ms = 4000): Promise<T> =>
-              new Promise((resolve, reject) => {
-                const t = setTimeout(() => reject(new Error('profiles fetch timeout')), ms);
-                p.then((v) => { clearTimeout(t); resolve(v); }).catch((e) => { clearTimeout(t); reject(e); });
-              });
-
             // Try to fetch existing profile; use maybeSingle to avoid throwing on 0 rows
             const { data: profile, error: profileError } = await withTimeout(
               supabase
@@ -175,12 +176,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (currentSession?.user) {
           console.log('Fetching initial user profile for:', currentSession.user.id);
           try {
-            const withTimeout = <T>(p: Promise<T>, ms = 4000): Promise<T> =>
-              new Promise((resolve, reject) => {
-                const t = setTimeout(() => reject(new Error('profiles fetch timeout')), ms);
-                p.then((v) => { clearTimeout(t); resolve(v); }).catch((e) => { clearTimeout(t); reject(e); });
-              });
-
             const { data: profile, error: profileError } = await withTimeout(
               supabase
                 .from('profiles')
